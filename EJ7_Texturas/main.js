@@ -30,23 +30,30 @@ function main() {
 
   const vsSource = `
   attribute vec4 aVertexPosition;
-  attribute vec4 aVertexColor;
+  attribute vec2 aTextureCoord;
+
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
-  varying lowp vec4 vColor;
+
+  varying highp vec2 vTextureCoord;
+  
+
   void main(void) {
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vColor = aVertexColor;
+    vTextureCoord = aTextureCoord;
   }
   `;
 
   // Fragment shader program
 
   const fsSource = `
-  varying lowp vec4 vColor;
-  void main(void) {
-    gl_FragColor = vColor;
-  }
+    varying highp vec2 vTextureCoord;
+
+    uniform sampler2D uSampler;
+
+    void main(void) {
+      gl_FragColor = texture2D(uSampler, vTextureCoord);
+    }
   `;
 
   // Initialize a shader program; this is where all the lighting
@@ -61,33 +68,45 @@ function main() {
     program: shaderProgram,
     attribLocations: {
       vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-      vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
+      textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
     },
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
       modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+      uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
     },
   };
 
+  const coneTexture = loadTexture(gl, 'https://thumbs.dreamstime.com/z/wrinkled-aluminum-foil-paper-15826634.jpg');
+  const cylinderTexture = loadTexture(gl, 'https://www.cocacolaespana.es/content/dam/journey/es/es/private/historia/love-coca-cola/2015/logo-coca-cola-lead.png');
+  const sphereTexture = loadTexture(gl, 'https://st6.cannypic.com/thumbs/35/351965_632_canny_pic.jpg');
+  
   // Here's where we call the routine that builds all the
   // objects we'll be drawing.
-  const cylinderBuffers = initBuffers(gl, cylinderArrays.position.buffer, cylinderArrays.indices.buffer);;
+  const cylinderBuffers = initBuffers(gl, cylinderArrays.position.buffer, cylinderArrays.indices.buffer, cylinderArrays.texCoord.buffer);;
   const cylinderVertexCount = cylinderArrays.indices.buffer.length;
+  const cylinderTexCoord = cylinderArrays.texCoord.buffer;
 
-  const sphereBuffers = initBuffers(gl, sphereArrays.position.buffer, sphereArrays.indices.buffer);;
+  const sphereBuffers = initBuffers(gl, sphereArrays.position.buffer, sphereArrays.indices.buffer, sphereArrays.texCoord.buffer);;
   const sphereVertexCount = sphereArrays.indices.buffer.length;
+  const sphereTexCoord = sphereArrays.texCoord.buffer;
 
-  const coneBuffers = initBuffers(gl, coneArrays.position.buffer, coneArrays.indices.buffer);;
+
+  const coneBuffers = initBuffers(gl, coneArrays.position.buffer, coneArrays.indices.buffer, coneArrays.texCoord.buffer);;
   const coneVertexCount = coneArrays.indices.buffer.length;
+  const coneTexCoord = coneArrays.texCoord.buffer;
 
   const buffers = 
   {
     cylinderBuffers, 
     cylinderVertexCount,
+    cylinderTexture,
     sphereBuffers,
     sphereVertexCount,
+    sphereTexture,
     coneBuffers,
-    coneVertexCount
+    coneVertexCount,
+    coneTexture,
   };
   
   var then = 0;
@@ -113,7 +132,7 @@ function main() {
 // Initialize the buffers we'll need. For this demo, we just
 // have one object -- a simple three-dimensional cube.
 //
-function initBuffers(gl, positions, indices) {
+function initBuffers(gl, positions, indices, texCoord) {
 
   // Create a buffer for the cube's vertex positions.
 
@@ -121,69 +140,26 @@ function initBuffers(gl, positions, indices) {
 
   // Select the positionBuffer as the one to apply buffer
   // operations to from here out.
-
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-  // Now create an array of positions for the cube.
-
-  // positions = [
-  //   //CUBO
-  //   -1.0, -1.0, 1.0,   //0
-  //   1.0, -1.0, 1.0,  //1
-  //   1.0, 1.0,  1.0,   //2
-  //   -1.0, 1.0, 1.0,   //3
-  //   1.0, 1.0, -1.0,  //4
-  //   -1.0, 1.0, -1.0,   //5
-  //   1.0, -1.0, -1.0,   //6
-  //   -1.0, -1.0,  -1.0   //7
-  //   ];
 
   // Now pass the list of positions into WebGL to build the
   // shape. We do this by creating a Float32Array from the
   // JavaScript array, then use it to fill the current buffer.
-
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
-  // Now set up the colors for the faces. We'll use solid colors
-  // for each face.
+  // Create a buffer for the cube's vertex positions.
 
-  const faceColors = [
-    [1.0,  0.0,  0.0,  1.0],    // Back face: red
-    [0.0,  0.0,  1.0,  1.0],    // Bottom face: blue
-    [1.0,  1.0,  0.0,  1.0],    // Right face: yellow
-    [1.0,  0.0,  1.0,  1.0],    // Left face: purple
-    [1.0,  0.0,  0.0,  1.0],    // Back face: red
-    [0.0,  0.0,  1.0,  1.0],    // Bottom face: blue
-    [1.0,  1.0,  0.0,  1.0],    // Right face: yellow
-    [1.0,  0.0,  1.0,  1.0],    // Left face: purple
-    [0.0,  1.0,  0.0,  1.0],    // Back face: green
-    [1.0,  0.0,  0.0,  1.0],    // Back face: red
-    [0.0,  0.0,  1.0,  1.0],    // Bottom face: blue
-    [1.0,  1.0,  0.0,  1.0],    // Right face: yellow
-    [1.0,  0.0,  1.0,  1.0],    // Left face: purple
-    [0.0,  1.0,  0.0,  1.0],    // Back face: green
-    [0.0,  0.0,  1.0,  1.0],    // Bottom face: blue
-    [1.0,  1.0,  0.0,  1.0],    // Right face: yellow
-    [1.0,  0.0,  1.0,  1.0],    // Left face: purple
-    [0.0,  1.0,  0.0,  1.0],    // Back face: green
-    [0.0,  0.0,  1.0,  1.0],    // Bottom face: blue
-    [1.0,  1.0,  0.0,  1.0],    // Right face: yellow
-    ];
+  const textureBuffer = gl.createBuffer();
 
-  // Convert the array of colors into a table for all the vertices.
+  // Select the positionBuffer as the one to apply buffer
+  // operations to from here out.
+  gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
 
-  var colors = [];
+  // Now pass the list of positions into WebGL to build the
+  // shape. We do this by creating a Float32Array from the
+  // JavaScript array, then use it to fill the current buffer.
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoord), gl.STATIC_DRAW);
 
-  for (var j = 0; j < faceColors.length; ++j) {
-    const c = faceColors[j];
-
-    // Repeat each color four times for the four vertices of the face
-    colors = colors.concat(c, c, c, c);
-  }
-
-  const colorBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
 
   // Build the element array buffer; this specifies the indices
   // into the vertex arrays for each face's vertices.
@@ -195,19 +171,12 @@ function initBuffers(gl, positions, indices) {
   // indices into the vertex array to specify each triangle's
   // position.
 
-  // indices = [
-  // 0,  1,  3, 2, 4, 1, 6, 0, 7, 3, 5, 4, 7, 6,
-  // ];
-  console.log("index buffer ", indices.length)
-  console.log("position buffer ", positions.length)
-  // Now send the element array to GL
-
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
     new Uint16Array(indices), gl.STATIC_DRAW);
 
   return {
     position: positionBuffer,
-    color: colorBuffer,
+    texCoord: textureBuffer,
     indices: indexBuffer,
   };
 }
@@ -273,19 +242,19 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
   //Area de dibujo de objetos
   {
     //dibujar cono
-    actualizacionWebGL(gl, programInfo, buffers.coneBuffers, projectionMatrix, modelViewMatrix);
+    actualizacionWebGL(gl, programInfo, buffers.coneBuffers, buffers.coneTexture, projectionMatrix, modelViewMatrix);
     gl.drawElements(gl.TRIANGLE_STRIP, buffers.coneVertexCount, type, offset);
     //dibujar esfera
     mat4.translate(modelViewMatrix,     // destination matrix
                  modelViewMatrix,     // matrix to translate
                  [2.5, 0.0, 0.0]);  // amount to translate
-    actualizacionWebGL(gl, programInfo, buffers.sphereBuffers, projectionMatrix, modelViewMatrix);
+    actualizacionWebGL(gl, programInfo, buffers.sphereBuffers, buffers.sphereTexture, projectionMatrix, modelViewMatrix);
     gl.drawElements(gl.TRIANGLE_STRIP, buffers.sphereVertexCount, type, offset);
     //dibujar cilindro
     mat4.translate(modelViewMatrix,     // destination matrix
                  modelViewMatrix,     // matrix to translate
                  [-5.0, 0.0, 0.0]);  // amount to translate
-    actualizacionWebGL(gl, programInfo, buffers.cylinderBuffers, projectionMatrix, modelViewMatrix);
+    actualizacionWebGL(gl, programInfo, buffers.cylinderBuffers, buffers.cylinderTexture, projectionMatrix, modelViewMatrix);
     gl.drawElements(gl.TRIANGLE_STRIP, buffers.cylinderVertexCount, type, offset);
   }
 
@@ -357,7 +326,7 @@ function resizeCanvas(){
 /*
 *Actualiza valores en webGL para su ultima transformación.
 */
-function actualizacionWebGL(gl, programInfo, buffers, projectionMatrix, modelViewMatrix){
+function actualizacionWebGL(gl, programInfo, buffers,texture, projectionMatrix, modelViewMatrix){
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute
   {
@@ -378,25 +347,24 @@ function actualizacionWebGL(gl, programInfo, buffers, projectionMatrix, modelVie
       programInfo.attribLocations.vertexPosition);
   }
 
-  // Tell WebGL how to pull out the colors from the color buffer
-  // into the vertexColor attribute.
-  {
-    const numComponents = 4;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
-    gl.vertexAttribPointer(
-      programInfo.attribLocations.vertexColor,
-      numComponents,
-      type,
-      normalize,
-      stride,
-      offset);
-    gl.enableVertexAttribArray(
-      programInfo.attribLocations.vertexColor);
-  }
+  // Tell WebGL how to pull out the texture coordinates from
+    // the texture coordinate buffer into the textureCoord attribute.
+    {
+      const type = gl.FLOAT;
+      const normalize = false;
+      const stride = 0;
+      const offset = 0;
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.texCoord);
+      gl.vertexAttribPointer(
+        programInfo.attribLocations.textureCoord,
+        buffers.texCoord.itemSize,
+        type,
+        normalize,
+        stride,
+        offset);
+      gl.enableVertexAttribArray(
+        programInfo.attribLocations.textureCoord);
+    }
 
   // Tell WebGL which indices to use to index the vertices
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
@@ -415,4 +383,72 @@ function actualizacionWebGL(gl, programInfo, buffers, projectionMatrix, modelVie
     programInfo.uniformLocations.modelViewMatrix,
     false,
     modelViewMatrix);
+
+  // Specify the texture to map onto the faces.
+
+    // Tell WebGL we want to affect texture unit 0
+    gl.activeTexture(gl.TEXTURE0);
+
+    // Bind the texture to texture unit 0
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    // Tell the shader we bound the texture to texture unit 0
+    gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+
+}
+
+//
+// Initialize a texture and load an image.
+// When the image finished loading copy it into the texture.
+//
+function loadTexture(gl, url) {
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  // Because images have to be download over the internet
+  // they might take a moment until they are ready.
+  // Until then put a single pixel in the texture so we can
+  // use it immediately. When the image has finished downloading
+  // we'll update the texture with the contents of the image.
+  const level = 0;
+  const internalFormat = gl.RGBA;
+  const width = 1;
+  const height = 1;
+  const border = 0;
+  const srcFormat = gl.RGBA;
+  const srcType = gl.UNSIGNED_BYTE;
+  const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
+  gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+    width, height, border, srcFormat, srcType,
+    pixel);
+
+  const image = new Image();
+  image.crossOrigin = '';
+  image.onload = function () {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+      srcFormat, srcType, image);
+
+    // WebGL1 has different requirements for power of 2 images
+    // vs non power of 2 images so check if the image is a
+    // power of 2 in both dimensions.
+    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+      // Yes, it's a power of 2. Generate mips.
+      gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+      // No, it's not a power of 2. Turn of mips and set
+      // wrapping to clamp to edge
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+  };
+  image.src = url;
+  console.log("Image loaded")
+  return texture;
+}
+
+function isPowerOf2(value) {
+  return (value & (value - 1)) == 0;
 }
