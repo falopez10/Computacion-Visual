@@ -961,6 +961,13 @@ UI.prototype.updateGlossiness = function() {
   glossiness = newGlossiness;
 };
 
+UI.prototype.updateZoomZ = function() {
+  // alert("zoomZ: "+zoomZ);
+  var newZoom = document.getElementById('slider').value;
+  console.log(newZoom);
+  zoomZ = newZoom/20;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // main program
 ////////////////////////////////////////////////////////////////////////////////
@@ -1137,6 +1144,10 @@ function makeRecursiveSpheres() {
   return objects;
 }
 
+//------------------------------------------------------------------------------------
+// Interact with document
+//------------------------------------------------------------------------------------
+
 window.onload = function() {
   gl = null;
   error = document.getElementById('error');
@@ -1144,7 +1155,7 @@ window.onload = function() {
   try { gl = canvas.getContext('experimental-webgl'); } catch(e) {}
 
   if(gl) {
-    error.innerHTML = 'Loading...';
+    // error.innerHTML = 'Loading...';
 
     // keep track of whether an <input> is focused or not (will be no only if inputFocusCount == 0)
     var inputs = document.getElementsByTagName('input');
@@ -1250,4 +1261,6 @@ document.onkeydown = function(event) {
       return false;
     }
   }
+
+
 };
